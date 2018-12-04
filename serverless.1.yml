@@ -3,31 +3,26 @@ service: es-cleanup-lambda
 
 provider:
   name: aws
-  stage: ${opt:stage, 'dev'}
-  region: ${opt:region, 'ap-northeast-2'}
-  profile: dev
+  stage: prod
+  region: eu-west-1
+  profile: ${env:AWS_DEFAULT_PROFILE}
   deploymentBucket:
-    name: 
+    name: ${env:S3_DEPLOYMENT_BUCKET}
   environment:
-    es_endpoint: vpc-dev-log-collector-ghfcybggmvewicsph4eelzwvya.ap-northeast-2.es.amazonaws.com                         
+    es_endpoint: search-es-demo-zveqnhnhjqm5flntemgmx5iuya.eu-west-1.es.amazonaws.com
     index: all
-    delete_after: "1"
+    delete_after: "7"
     index_format: "%Y.%m.%d"
   stackTags: # Optional CF stack tags
-    Owner: jongam.oh@kurlycorp.com
+    Owner: aws@cloudreach.com
     Purpose: es-cleanup
-    Environment: DEV
+    Environment: PROD
   iamRoleStatements:
     - Effect: "Allow"
       Action:
         - "es:*"
-      Resource: "arn:aws:es:ap-northeast-2:030787254034:domain/dev-log-collector/*"
+      Resource: "arn:aws:es:eu-west-1:123456789012:domain/es-demo/*"
       # you must specify the full ARN  of the AWS ES Domain
-    - Effect: "Allow"
-      Action:
-        - "ec2:CreateNetworkInterface"
-        - "ec2:DescribeNetworkInterfaces"
-      Resource: "arn:aws:es:ap-northeast-2:030787254034:domain/dev-log-collector/*"      
 
 
 
@@ -44,7 +39,7 @@ functions:
     name: es-cleanup-lambda
     description: ES old index removal
     runtime: python2.7
-    memorySize: "256"
+    memorySize: "128"
     timeout: 300
     package:
       exclude:
@@ -56,9 +51,7 @@ functions:
         - CONTRIBUTING.md
     events:
       # Invoke Lambda function every night at 01.00 AM
-      - schedule: cron(0 15 * * ? *)
-      # Invoke Lambda function every 5 min everyday .
-      # - schedule: cron(0/5 * * * ? *)
+      - schedule: cron(0 1 * * ? *)
 
 resources:
   Description: "AWS Lambda: Elasticsearch Index Cleanup"      

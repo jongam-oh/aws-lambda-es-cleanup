@@ -15,10 +15,11 @@ from botocore.credentials import create_credential_resolver
 from botocore.session import get_session
 from botocore.vendored.requests import Session
 import sys
-if sys.version_info[0] == 3:
-    from urllib.request import quote
-else:
-    from urllib import quote
+from urllib import quote
+# if sys.version_info[0] == 3:
+#     from urllib.request import quote
+# else:
+#     from urllib import quote
 
 
 class ES_Exception(Exception):
@@ -48,7 +49,7 @@ class ES_Cleanup(object):
         self.report = []
         self.event = event
         self.context = context
-
+        self.cur_account = self.get_parameter("account")
         self.cfg = {}
         self.cfg["es_endpoint"] = self.get_parameter("es_endpoint")
         self.cfg["index"] = self.get_parameter("index", "all").split(",")
@@ -109,6 +110,10 @@ class ES_Cleanup(object):
                     self.cfg["es_endpoint"], quote(path)),
                 data=payload,
                 headers={'Host': self.cfg["es_endpoint"]})
+            url = "https://{}{}?pretty&format=json".format(
+                    self.cfg["es_endpoint"], quote(path))
+            host = self.cfg["es_endpoint"];
+            print(" %s ,%s" % (url,host))
             credential_resolver = create_credential_resolver(get_session())
             credentials = credential_resolver.load_credentials()
             SigV4Auth(credentials, 'es', es_region).add_auth(req)
@@ -118,7 +123,7 @@ class ES_Cleanup(object):
                 session = Session()
                 res = session.send(preq)
                 if res.status_code >= 200 and res.status_code <= 299:
-                    # print("%s %s" % (res.status_code, res.content))
+                    print("%s %s" % (res.status_code, res.content))
                     return json.loads(res.content)
                 else:
                     raise ES_Exception(res.status_code, res._content)
@@ -173,6 +178,7 @@ def lambda_handler(event, context):
     Returns:
         None
     """
+    print("ES cleanup Started!!!")
     es = ES_Cleanup(event, context)
     # Index cutoff definition, remove older than this date
     earliest_to_keep = datetime.date.today() - datetime.timedelta(
@@ -186,14 +192,17 @@ def lambda_handler(event, context):
         idx_split = index["index"].rsplit("-",
             1 + es.cfg["index_format"].count("-"))
         idx_name = idx_split[0]
+        print("idx_name=> %s" % (idx_name))
         idx_date = '-'.join(word for word in idx_split[1:])
+        print("idx_date=> %s" % (idx_date))
 
         if idx_name in es.cfg["index"] or "all" in es.cfg["index"]:
-
+            print("Deleting index!!!: %s" % index["index"])
             if idx_date <= earliest_to_keep.strftime(es.cfg["index_format"]):
                 print("Deleting index: %s" % index["index"])
                 es.delete_index(index["index"])
 
+    print("ES cleanup End!!!")
 
 if __name__ == '__main__':
     event = {
