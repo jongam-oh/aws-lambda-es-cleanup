@@ -110,10 +110,11 @@ class ES_Cleanup(object):
                     self.cfg["es_endpoint"], quote(path)),
                 data=payload,
                 headers={'Host': self.cfg["es_endpoint"]})
-            url = "https://{}{}?pretty&format=json".format(
-                    self.cfg["es_endpoint"], quote(path))
-            host = self.cfg["es_endpoint"];
-            print(" %s ,%s" % (url,host))
+            #for debugging
+            # url = "https://{}{}?pretty&format=json".format(
+            #         self.cfg["es_endpoint"], quote(path))
+            # host = self.cfg["es_endpoint"];
+            # print(" %s ,%s" % (url,host))
             credential_resolver = create_credential_resolver(get_session())
             credentials = credential_resolver.load_credentials()
             SigV4Auth(credentials, 'es', es_region).add_auth(req)
@@ -123,7 +124,7 @@ class ES_Cleanup(object):
                 session = Session()
                 res = session.send(preq)
                 if res.status_code >= 200 and res.status_code <= 299:
-                    print("%s %s" % (res.status_code, res.content))
+                    # print("%s %s" % (res.status_code, res.content))
                     return json.loads(res.content)
                 else:
                     raise ES_Exception(res.status_code, res._content)
@@ -192,13 +193,19 @@ def lambda_handler(event, context):
         idx_split = index["index"].rsplit("-",
             1 + es.cfg["index_format"].count("-"))
         idx_name = idx_split[0]
-        print("idx_name=> %s" % (idx_name))
+        # print("idx_name=> %s" % (idx_name))
         idx_date = '-'.join(word for word in idx_split[1:])
-        print("idx_date=> %s" % (idx_date))
+        # print("idx_date=> %s" % (idx_date))
 
         if idx_name in es.cfg["index"] or "all" in es.cfg["index"]:
-            print("Deleting index!!!: %s" % index["index"])
-            if idx_date <= earliest_to_keep.strftime(es.cfg["index_format"]):
+            # print("Deleting index!!!: %s" % index["index"])
+            # print("earliest_to_keep: %s" % earliest_to_keep);
+            earliest_to_keep = earliest_to_keep.strftime(es.cfg["index_format"])
+            index_date = datetime.datetime.strptime(idx_date, es.cfg["index_format"])
+            earliest_to_keep = datetime.datetime.strptime(earliest_to_keep, es.cfg["index_format"])
+            # print("index_date: %s" % index_date)
+            # print("earliest_to_keep: %s" % earliest_to_keep)
+            if index_date <= earliest_to_keep :
                 print("Deleting index: %s" % index["index"])
                 es.delete_index(index["index"])
 

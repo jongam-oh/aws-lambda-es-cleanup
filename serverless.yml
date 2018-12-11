@@ -11,7 +11,7 @@ provider:
   environment:
     es_endpoint: vpc-dev-log-collector-ghfcybggmvewicsph4eelzwvya.ap-northeast-2.es.amazonaws.com                         
     index: all
-    delete_after: "1"
+    delete_after: "2"
     index_format: "%Y.%m.%d"
   stackTags: # Optional CF stack tags
     Owner: jongam.oh@kurlycorp.com
@@ -58,7 +58,7 @@ functions:
       # Invoke Lambda function every night at 01.00 AM
       - schedule: cron(0 15 * * ? *)
       # Invoke Lambda function every 5 min everyday .
-      # - schedule: cron(0/5 * * * ? *)
+      # - schedule: cron(0/1 * * * ? *)
 
 resources:
   Description: "AWS Lambda: Elasticsearch Index Cleanup"      
