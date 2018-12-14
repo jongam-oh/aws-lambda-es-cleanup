@@ -1,0 +1,64 @@
+# serverless.yml
+service: es-cleanup-lambda
+
+provider:
+  name: aws
+  stage: ${opt:stage, 'prod'}
+  region: ${opt:region, 'ap-northeast-2'}
+  profile: prod
+  deploymentBucket:
+    name: 
+  environment:
+    es_endpoint: vpc-elasticsearch-prod-01-kw4qezbnwx7bjjubltp25p2c3a.ap-northeast-2.es.amazonaws.com                         
+    index: all
+    #15 일 지난 것은 삭제
+    delete_after: "15"
+    index_format: "%Y.%m.%d"
+  stackTags: # Optional CF stack tags
+    Owner: jongam.oh@kurlycorp.com
+    Purpose: es-cleanup
+    Environment: PROD
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "es:*"
+      Resource: "arn:aws:es:ap-northeast-2:804823275049:domain/elasticsearch-prod-01/*"
+      # you must specify the full ARN  of the AWS ES Domain
+    - Effect: "Allow"
+      Action:
+        - "ec2:CreateNetworkInterface"
+        - "ec2:DescribeNetworkInterfaces"
+      Resource: "arn:aws:es:ap-northeast-2:804823275049:domain/elasticsearch-prod-01/*"      
+
+
+
+functions:
+  es-cleanup-lambda:
+    handler: es-cleanup.lambda_handler
+    vpc:
+      securityGroupIds:
+        - sg-0bdff48ba830c9f96
+      subnetIds:
+        - subnet-1fe2ee77
+        - subnet-26daaa6a    
+    name: es-cleanup-lambda
+    description: ES old index removal
+    runtime: python2.7
+    memorySize: "256"
+    timeout: 300
+    package:
+      exclude:
+        - ./**
+      include:
+        - es-cleanup.py
+        - LICENSE.md
+        - README.md
+        - CONTRIBUTING.md
+    events:
+      # Invoke Lambda function every night at 01.00 AM
+      - schedule: cron(0 15 * * ? *)
+      # Invoke Lambda function every 5 min everyday .
+      # - schedule: cron(0/1 * * * ? *)
+
+resources:
+  Description: "AWS Lambda: Elasticsearch Index Cleanup"      
